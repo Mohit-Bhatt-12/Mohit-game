@@ -2,6 +2,7 @@ import pygame
 import random
 import sys
 import os
+import time
 
 # Initialize Pygame
 pygame.init()
@@ -27,18 +28,21 @@ bullet_speed = 10
 enemy_bullet_speed = 5
 font = pygame.font.SysFont(None, 40)
 
-# Load Images
-player_img = pygame.image.load("player.png")
-player_img = pygame.transform.scale(player_img, (50, 50))
+# Load Images Safely
+def load_image(path, size=None):
+    try:
+        img = pygame.image.load(path)
+        if size:
+            img = pygame.transform.scale(img, size)
+        return img
+    except Exception as e:
+        print(f"[ERROR] Couldn't load image {path}: {e}")
+        return pygame.Surface((50, 50))
 
-enemy_img = pygame.image.load("ghost.png")
-enemy_img = pygame.transform.scale(enemy_img, (60, 60))
-
-background_img = pygame.image.load("background.png")
-background_img = pygame.transform.scale(background_img, (WIDTH, HEIGHT))
-
-panel_background = pygame.image.load("panel_background.png")
-panel_background = pygame.transform.scale(panel_background, (WIDTH, HEIGHT))
+player_img = load_image("player.png", (50, 50))
+enemy_img = load_image("ghost.png", (60, 60))
+background_img = load_image("background.png", (WIDTH, HEIGHT))
+panel_background = load_image("panel_background.png", (WIDTH, HEIGHT))
 
 def difficulty_panel():
     while True:
@@ -64,12 +68,12 @@ def difficulty_panel():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_1:
-                    return 2, 1, 0.1   # Easy -> Slowest Enemy Speed
-                elif event.key == pygame.K_2:
-                    return 4, 2, 0.2   # Medium -> Moderate Enemy Speed
-                elif event.key == pygame.K_3:
-                    return 6, 4, 0.3   # Hard -> Fastest Enemy Speed
+                if event.key == pygame.K_1 or event.unicode == '1':
+                    return 2, 1, 0.1
+                elif event.key == pygame.K_2 or event.unicode == '2':
+                    return 4, 2, 0.2
+                elif event.key == pygame.K_3 or event.unicode == '3':
+                    return 6, 4, 0.3
 
 # Panel After Game Over
 def end_panel():
@@ -93,9 +97,9 @@ def end_panel():
                 pygame.quit()
                 sys.exit()
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_1:
+                if event.key == pygame.K_1 or event.unicode == '1':
                     return "REPLAY"
-                elif event.key == pygame.K_2:
+                elif event.key == pygame.K_2 or event.unicode == '2':
                     pygame.quit()
                     sys.exit()
 
@@ -111,10 +115,8 @@ def enemy_shoot(enemy):
 
 # Main Game Loop
 while True:
-    # Get chosen difficulty
     enemy_speed, max_enemies, enemy_spawn_rate = difficulty_panel()
-    
-    # Reset Game Variables
+
     score = 0
     enemies = []
     enemy_bullets = []
@@ -123,7 +125,7 @@ while True:
 
     playing = True
 
-    while playing:  # Game Loop
+    while playing:
         screen.fill(WHITE)
         screen.blit(background_img, (0, 0))
 
@@ -135,26 +137,22 @@ while True:
                 if event.key == pygame.K_SPACE:
                     player_shoot()
 
-        # Player Movement
         keys = pygame.key.get_pressed()
         if keys[pygame.K_UP] and player_rect.top > 0:
             player_rect.y -= player_speed
         if keys[pygame.K_DOWN] and player_rect.bottom < HEIGHT:
             player_rect.y += player_speed
 
-        # Move and Draw Player Bullets
         for bullet in player_bullets[:]:
             bullet.x += bullet_speed
             if bullet.x > WIDTH:
                 player_bullets.remove(bullet)
             pygame.draw.rect(screen, BLUE, bullet)
 
-        # Spawn Enemies
         if random.random() < enemy_spawn_rate and len(enemies) < max_enemies:
             enemy_rect = enemy_img.get_rect(topleft=(WIDTH, random.randint(0, HEIGHT - 60)))
             enemies.append(enemy_rect)
 
-        # Move and Draw Enemies
         for enemy in enemies[:]:
             enemy.x -= enemy_speed
             if enemy.x < 0:
@@ -171,7 +169,6 @@ while True:
                     pygame.quit()
                     sys.exit()
 
-        # Move and Draw Enemy Bullets
         for bullet in enemy_bullets[:]:
             bullet.x -= enemy_bullet_speed
             if bullet.x < 0:
@@ -185,7 +182,6 @@ while True:
                     sys.exit()
             pygame.draw.rect(screen, RED, bullet)
 
-        # Bullet Collision with Enemies
         for bullet in player_bullets[:]:
             for enemy in enemies[:]:
                 if bullet.colliderect(enemy):
@@ -194,10 +190,8 @@ while True:
                     score += 1
                     break
 
-        # Draw Player
         screen.blit(player_img, player_rect)
 
-        # Display Score
         score_text = font.render(f"Score: {score}", True, YELLOW)
         screen.blit(score_text, (10, 10))
 
